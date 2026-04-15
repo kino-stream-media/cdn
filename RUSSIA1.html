@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Перенаправление на поток RUSSIA1</title>
+    <script>
+        (function() {
+            // 1. Определяем смещение часового пояса пользователя относительно UTC
+            const date = new Date();
+            // getTimezoneOffset() возвращает разницу в минутах между UTC и локальным временем,
+            // причём с обратным знаком (для UTC+3 вернёт -180). Поэтому инвертируем и делим на 60.
+            const offsetMinutes = date.getTimezoneOffset();
+            const offsetHours = -offsetMinutes / 60;
+
+            // 2. Форматируем строку смещения: например, "+3", "-5", "+2.5" (если есть нецелые часовые пояса)
+            //    Округляем до одного знака после запятой для поясов вроде +5:30, но у нас ожидается целое.
+            const sign = offsetHours >= 0 ? '+' : '';
+            const formattedOffset = sign + offsetHours.toFixed(1).replace(/\.0$/, '');
+
+            // 3. Собираем URL для M3U8
+            const baseStreamUrl = 'https://kino-stream.online/hls/RUSSIA1';
+            const targetUrl = `${baseStreamUrl}${formattedOffset}.m3u8`;
+
+            // 4. Выполняем немедленное перенаправление
+            window.location.replace(targetUrl);
+        })();
+    </script>
+</head>
+<body>
+    <!-- Резервное сообщение, если JS по какой-то причине не сработает (очень редко) -->
+    <p>Перенаправление на телеканал...</p>
+    <noscript>
+        <p>Для автоматического перенаправления включите JavaScript или перейдите по 
+        <a href="https://kino-stream.online/hls/RUSSIA1+3.m3u8">прямой ссылке (UTC+3)</a>.</p>
+    </noscript>
+</body>
+</html>
