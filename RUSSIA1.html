@@ -1,37 +1,161 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <title>Перенаправление на поток RUSSIA1</title>
-    <script>
-        (function() {
-            // 1. Определяем смещение часового пояса пользователя относительно UTC
-            const date = new Date();
-            // getTimezoneOffset() возвращает разницу в минутах между UTC и локальным временем,
-            // причём с обратным знаком (для UTC+3 вернёт -180). Поэтому инвертируем и делим на 60.
-            const offsetMinutes = date.getTimezoneOffset();
-            const offsetHours = -offsetMinutes / 60;
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RUSSIA1 — загрузка потока...</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
-            // 2. Форматируем строку смещения: например, "+3", "-5", "+2.5" (если есть нецелые часовые пояса)
-            //    Округляем до одного знака после запятой для поясов вроде +5:30, но у нас ожидается целое.
-            const sign = offsetHours >= 0 ? '+' : '';
-            const formattedOffset = sign + offsetHours.toFixed(1).replace(/\.0$/, '');
+    body {
+      background: #0d0d0d;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
 
-            // 3. Собираем URL для M3U8
-            const baseStreamUrl = 'https://kino-stream.online/hls/RUSSIA1';
-            const targetUrl = `${baseStreamUrl}${formattedOffset}.m3u8`;
+    .card {
+      text-align: center;
+      padding: 2.5rem 3rem;
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 16px;
+      max-width: 420px;
+      width: 90%;
+    }
 
-            // 4. Выполняем немедленное перенаправление
-            window.location.replace(targetUrl);
-        })();
-    </script>
+    .logo {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 4px;
+      color: #e8001a;
+      text-transform: uppercase;
+      margin-bottom: 1.5rem;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid #2a2a2a;
+      border-top-color: #e8001a;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 1.5rem;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .status {
+      font-size: 15px;
+      color: #aaa;
+      line-height: 1.6;
+    }
+
+    .status strong {
+      color: #fff;
+      font-weight: 500;
+    }
+
+    .stream-url {
+      margin-top: 1.2rem;
+      padding: 10px 14px;
+      background: #111;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 12px;
+      color: #4caf50;
+      word-break: break-all;
+      display: none;
+    }
+
+    .error {
+      color: #e8001a;
+      font-size: 14px;
+      margin-top: 1rem;
+      display: none;
+    }
+  </style>
 </head>
 <body>
-    <!-- Резервное сообщение, если JS по какой-то причине не сработает (очень редко) -->
-    <p>Перенаправление на телеканал...</p>
-    <noscript>
-        <p>Для автоматического перенаправления включите JavaScript или перейдите по 
-        <a href="https://kino-stream.online/hls/RUSSIA1+3.m3u8">прямой ссылке (UTC+3)</a>.</p>
-    </noscript>
+<div class="card">
+  <div class="logo">РОССИЯ 1</div>
+  <div class="spinner" id="spinner"></div>
+  <div class="status" id="status">Определяем ваш часовой пояс...</div>
+  <div class="stream-url" id="stream-url"></div>
+  <div class="error" id="error"></div>
+</div>
+
+<script>
+  const BASE_HOST = 'https://cdn.kinostream.workes.dev/RUSSIA1';
+  const MOSCOW_OFFSET = 3; // UTC+3
+
+  function getStreamUrl() {
+    // Смещение устройства в минутах (отрицательное для UTC+)
+    const deviceOffsetMin = new Date().getTimezoneOffset();
+    // Смещение устройства от UTC в часах
+    const deviceOffsetHours = -deviceOffsetMin / 60;
+    // Разница с Москвой
+    const diffFromMoscow = deviceOffsetHours - MOSCOW_OFFSET;
+
+    let suffix = '';
+    if (diffFromMoscow === 0) {
+      suffix = ''; // базовый поток
+    } else if (diffFromMoscow > 0) {
+      suffix = '+' + diffFromMoscow;
+    } else {
+      suffix = String(diffFromMoscow); // отрицательное
+    }
+
+    return {
+      url: BASE_HOST + suffix + '.m3u8',
+      deviceOffset: deviceOffsetHours,
+      diff: diffFromMoscow
+    };
+  }
+
+  function formatOffset(hours) {
+    const sign = hours >= 0 ? '+' : '';
+    return 'UTC' + sign + hours;
+  }
+
+  function redirect() {
+    const statusEl = document.getElementById('status');
+    const streamUrlEl = document.getElementById('stream-url');
+    const spinnerEl = document.getElementById('spinner');
+
+    try {
+      const { url, deviceOffset, diff } = getStreamUrl();
+
+      const diffStr = diff === 0 ? '0' : (diff > 0 ? '+' + diff : String(diff));
+
+      statusEl.innerHTML =
+        'Ваш часовой пояс: <strong>' + formatOffset(deviceOffset) + '</strong><br>' +
+        'Разница с Москвой: <strong>' + diffStr + ' ч.</strong><br>' +
+        'Открываем поток...';
+
+      streamUrlEl.textContent = url;
+      streamUrlEl.style.display = 'block';
+
+      // Переход на поток через 0.8 сек
+      setTimeout(() => {
+        window.location.href = url;
+      }, 800);
+
+    } catch (e) {
+      spinnerEl.style.display = 'none';
+      statusEl.textContent = 'Не удалось определить часовой пояс.';
+      document.getElementById('error').textContent = 'Ошибка: ' + e.message;
+      document.getElementById('error').style.display = 'block';
+    }
+  }
+
+  redirect();
+</script>
 </body>
 </html>
